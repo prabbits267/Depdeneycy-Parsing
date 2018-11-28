@@ -11,6 +11,8 @@ class Sentence():
         parsed_sentences = list()
         single_sentence = []
         for line in text.splitlines():
+            if '# newdoc id =' in line:
+                continue
             line = line.strip()
             if not line:
                 temp_sentence = [w for w in single_sentence]
