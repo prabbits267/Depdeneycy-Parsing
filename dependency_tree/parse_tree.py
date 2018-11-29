@@ -1,6 +1,8 @@
 import pickle
 from os.path import isfile
 
+from nltk import word_tokenize
+
 from dependency_tree.Tree import Tree
 from parse_single_sentence import Sentence
 
@@ -9,6 +11,7 @@ class ParseTree():
         self.file_name = '../resources/tree_data.pkl'
         self.postag_file = '../resources/pos_tag.txt'
         self.dependence_file = '../resources/dependence.txt'
+        self.tree_path = '../resources/tree_data.pkl'
         self.trees = self.parse_tree()
         self.dependence_list = self.get_relation()
         self.pos_tag_list = self.get_pos()
@@ -29,7 +32,7 @@ class ParseTree():
                     except:
                         continue
                     trees.append(tree)
-            with open('tree_data.pkl', 'wb') as file_writer:
+            with open(self.tree_path, 'wb') as file_writer:
                 pickle.dump(trees, file_writer)
         return trees
 
@@ -42,14 +45,14 @@ class ParseTree():
                 node = self.parse_node(raw)
                 node_list.append(node)
             except:
-                raise Exception
+                raise Exception()
         return sent_id, sent, node_list
 
     def parse_node(self, node):
         node = node.split('\t')
         try:
             word_id = int(node[0])
-            word = node[2]
+            word = node[1]
             POS = node[3]
             head_id = int(node[6])
             dependence_relation = node[7]
@@ -77,53 +80,110 @@ class ParseTree():
                 file_writer.write(dependence_str + '\n')
         return pos_tags
 
+    # def simulate_action(self, tree):
+    #     stack = ['root']
+    #     input_buffer = word_tokenize(tree.sent)
+    #     word_id = {'root': 0}
+    #     word_id.update({w[1]: w[0] for w in tree.node})
+    #     input_buffer_ind = [word_id[w] for w in input_buffer]
+    #     shift = []
+    #     lr_arc = []
+    #     while (len(stack) > 0):
+    #         if (len(stack) < 2 and len(input_buffer) > 0) \
+    #                 or (self.get_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node) is None) \
+    #                 or (self.get_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node) is not None and self.check_right_arc(word_id[stack[-1]], tree.node, input_buffer_ind)):
+    #             stack.append(input_buffer[0])
+    #             input_buffer.pop(0)
+    #             input_buffer_ind.pop(0)
+    #             print('shift')
+    #         else:
+    #             node = self.get_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node)
+    #             # left arc
+    #             if node[0] < node[3]:
+    #                 print('left arc')
+    #                 stack.pop(-2)
+    #             elif self.check_right_arc(word_id[stack[-1]], tree.node, input_buffer_ind):
+    #                 print('right arc')
+    #                 stack.pop(-1)
+    #     return shift, lr_arc
+    #
+    # def get_operation(self, stack_1, stack_2, nodes):
+    #     for node in nodes:
+    #         if stack_1 in node and stack_2 in node:
+    #             return node
+    #     return None
+    #
+    # def check_right_arc(self, stack_ind, nodes, input_buffer):
+    #     nodes = [node for node in nodes if node[0] in input_buffer]
+    #     for node in nodes:
+    #         if stack_ind == nodes[3]:
+    #             return True
+    #     return False
+
+    # node = self.check_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node)
+    # if node[1]:
+    #     print('left arc')
+    #     stack.pop(-2)
+    # else:
+    #     print('right arc')
+    #     stack.pop(-1)
+
+
     def simulate_action(self, tree):
         stack = ['root']
-        sent = tree.sent.split(' ')
-        word_id = {w[1]:w[0] for w in tree}
+        input_buffer = word_tokenize(tree.sent)
+        word_id = {'root':0}
+        word_id.update({w[1]:w[0] for w in tree.node})
+        input_buffer_ind = [word_id[w] for w in input_buffer]
         shift = []
         lr_arc = []
-        while (len(stack) > 0):
-            # neu stack chua co phan tu nao va trong input_buffer con phan tu
-            # ham check operation: kiem tra co trong tap operation, thoa man dieu kien right arc
-            # tra ve false neu ko co operation
-            # tra ve -1 neu la right arc
-            # -2 neu la left_arc
-            if (len(stack) < 2 and len(sent) > 0) or (self.check_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node) is False):
-                # shift operation
-                stack.append(sent[0])
-                sent.pop(0)
-                # add operation list
-                shift.append(1)
+
+        while(len(stack) > 0):
+            if (len(stack) < 2 and len(input_buffer) > 0) \
+                    or (self.check_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node, input_buffer_ind[0]) is None):
+                stack.append(input_buffer[0])
+                input_buffer.pop(0)
+                input_buffer_ind.pop(0)
+                print('shift')
                 continue
-            index = stack[-1]
-            if self.check_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node):
-                index = self.check_operation(stack[-1], stack[-2], tree.node)
-                stack.pop(index)
-                # add to operation list
-                lr_arc.append(2)
+            else:
+                node = self.get_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node)
+                if node[0] < node[3]:
+                    print('left arc')
+                    stack.pop(-2)
+                else:
+                    print('right arc')
+                    stack.pop(-1)
         return shift, lr_arc
 
-    # input : stack_id
-    # return None
-    # return (relation, head_id , dependence_id)
-    def check_operation(self, stack_1, stack_2, nodes):
+    # True: left_arc, false: right arc
+    def check_operation(self, stack_1, stack_2, nodes, ind):
         for node in nodes:
             if stack_1 in node and stack_2 in node:
-                # right_arc, precondition
-                stack_ind = nodes.index(node)
-                if stack_1 > stack_2 and stack_1 and self.check_stack(stack_1, nodes[stack_ind:]) is False:
-                    return node
+                if node[0] < node[3]:
+                    return node, True, 'left - arc'
+                else:
+                    if self.check_right_arc(stack_2, nodes[ind:]):
+                        return node, False, 'right - arc'
         return None
 
-    def check_stack(self, stack_id, nodes):
+    def check_right_arc(self, stack_id, nodes):
         for node in nodes:
-            if node[3] == stack_id:
-                return True
-        return False
+            if node[3] == stack_id and node[-1] != 'root':
+                return False
+        return True
+
+    def get_operation(self, stack_1, stack_2, nodes):
+        for node in nodes:
+            if stack_1 in node and stack_2 in node:
+                return node
+        return None
 
 pars = ParseTree()
 # print(pars.simulate_action(pars.trees[1]))
-print(pars.trees[1].node)
-print(pars.trees[1].sent)
-print(pars.simulate_action(pars.trees[1]))
+print(pars.trees[19].node)
+print(pars.trees[19].sent)
+print(pars.simulate_action(pars.trees[19]))
+# print(pars.check_operation(4, 3, pars.trees[19].node))
+# print(pars.check_operation(7, 1, pars.trees[19].node, 11))
+# print(pars.check_right_arc(1, pars.trees[19].node))
