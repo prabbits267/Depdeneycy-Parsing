@@ -80,33 +80,73 @@ class ParseTree():
                 file_writer.write(dependence_str + '\n')
         return pos_tags
 
+    def get_item(self, list_data, ind):
+        if ind is None:
+            return None
+        try:
+            return list_data[ind]
+        except IndexError:
+            return None
+
+    def get_node_infor(self, node, stack, input_buffer, lr_child):
+        stack_1 = self.get_item(node, self.get_item(stack, -1))
+        stack_2 = self.get_item(node, self.get_item(stack, -2))
+        buffer_1 = self.get_item(node, self.get_item(input_buffer, 0))
+        rlc_s1 = self.get_item(lr_child, self.get_item(stack, -1))
+        rlc_s2 = self.get_item(lr_child, self.get_item(stack, -2))
+        lc_s1 = rlc_s1[1]
+        rc_s1 = rlc_s1[2]
+        lc_s2 = rlc_s2[1]
+        rc_s2 = rlc_s2[2]
+
+        return stack_1, stack_2, buffer_1, lc_s1, rc_s1, lc_s2, rc_s2
+
     def simulate_action(self, tree):
-        stack = ['root']
-        input_buffer = [w[1] for w in tree.node]
-        word_id = {'root':0}
-        word_id.update({w[1]:w[0] for w in tree.node})
-        input_buffer_ind = [word_id[w] for w in input_buffer]
         shift = []
         lr_arc = []
 
+        lr_child = self.get_lr_child(tree.node)
+
+        stack = [0]
+        input_buffer = [w[0] for w in tree.node]
         while(len(stack) >= 0):
-            if (len(input_buffer) == 0) or (len(stack) > 1 and (self.check_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node, input_buffer_ind[0] + 1))):
+            word_list = []
+            pos_list = []
+            dep_list = []
+            stack_1, stack_2, buffer_1, lc_s1, rc_s1, lc_s2, rc_s2 = self.get_node_infor(tree.node, stack, input_buffer, lr_child)
+            if (len(input_buffer) == 0) or (len(stack) > 1 and (self.check_operation(stack[-1], stack[-2], tree.node, input_buffer[0] - 1))):
                 try:
-                    node = self.get_operation(word_id[stack[-1]], word_id[stack[-2]], tree.node)
+                    node, i = self.get_node(stack[-1], stack[-2], tree.node)
                 except IndexError:
                     break
                 if node[0] < node[3]:
                     print('left arc')
+                    word_list.append(self.get_item(stack_1, 0))
+                    word_list.append(self.get_item(stack_2, 0))
+                    word_list.append(self.get_item(buffer_1, 0))
+                    word_list.append(self.get_item(lc_s1, 0))
+                    word_list.append(self.get_item(rc_s1, 0))
+                    word_list.append(self.get_item(lc_s2, 0))
+                    word_list.append(self.get_item(rc_s2, 0))
+
+                    pos_list.append(self.get_item(stack_1, 2))
+                    pos_list.append(self.get_item(stack_2, 2))
+                    pos_list.append(self.get_item(buffer_1, 2))
+                    pos_list.append(self.get_item(lc_s1, 2))
+                    pos_list.append(self.get_item(rc_s1, 2))
+                    pos_list.append(self.get_item(lc_s2, 2))
+                    pos_list.append(self.get_item(rc_s2, 2))
+
+                    depen
                     stack.pop(-2)
-                    input_buffer_ind.pop(0)
                 else:
                     print('right arc')
                     stack.pop(-1)
-                    input_buffer_ind.pop(0)
             else:
                 stack.append(input_buffer[0])
                 input_buffer.pop(0)
                 print('shift')
+
         return shift, lr_arc
 
     # True: left_arc, false: right arc
@@ -127,14 +167,34 @@ class ParseTree():
                 return False
         return True
 
-    def get_operation(self, stack_1, stack_2, nodes):
-        for node in nodes:
+    def get_node(self, stack_1, stack_2, nodes):
+        for i, node in enumerate(nodes):
             if stack_1 in node and stack_2 in node:
-                return node
+                return node, i
         return None
 
+    def get_lr_child(self, nodes):
+        dep_list = []
+
+        for node in nodes:
+            dependence = [w[0] for w in nodes if w[3] == node[0]]
+            if len(dependence) == 0:
+                dep_list.append((node, None, None))
+            elif len(dependence) == 1:
+                if node[0] < dependence[0]:
+                    left_child = dependence[0]
+                    dep_list.append((node, nodes[left_child - 1], None))
+                else:
+                    right_child = dependence[0]
+                    dep_list.append((node, None, nodes[right_child -1]))
+            else:
+                left_child = min(dependence)
+                right_child = max(dependence)
+                dep_list.append((node, nodes[left_child-1], nodes[right_child-1]))
+        return dep_list
+
 pars = ParseTree()
-z = 0
-print(pars.trees[6].node)
 print(pars.trees[6].sent)
-print(pars.simulate_action(pars.trees[6]))
+print(pars.trees[6].node)
+print(pars.get_lr_child(pars.trees[6].node))
+# print(pars.simulate_action(pars.trees[5]))
