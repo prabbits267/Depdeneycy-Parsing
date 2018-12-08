@@ -1,18 +1,14 @@
 import pickle
 from os.path import isfile
-
-from nltk import word_tokenize, wordpunct_tokenize, sent_tokenize, WhitespaceTokenizer
-
-from dependency_tree.Node import Node
 from dependency_tree.Tree import Tree
 from parse_single_sentence import Sentence
 
 class ParseTree():
     def __init__(self):
-        self.file_name = '../resources/tree_data.pkl'
-        self.postag_file = '../resources/pos_tag.txt'
-        self.dependence_file = '../resources/dependence.txt'
-        self.tree_path = '../resources/tree_data.pkl'
+        self.file_name = 'data/tree_data.pkl'
+        self.postag_file = 'data/pos_tag.txt'
+        self.dependence_file = 'data/dependence.txt'
+        self.tree_path = 'data/tree_data.pkl'
         self.trees = self.parse_tree()
         self.dependence_list = self.get_relation()
         self.pos_tag_list = self.get_pos()
@@ -116,13 +112,13 @@ class ParseTree():
         pos_list.append(self.get_item_dict(tag_dict, rc_stack_1_ind))
         pos_list.append(self.get_item_dict(tag_dict, rc_stack_2_ind))
 
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, stack_2_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, buffer_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, lc_stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, lc_stack_2_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, rc_stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item_dict(dep_dict_parsed, rc_stack_2_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, stack_1_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, stack_2_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, buffer_1_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, lc_stack_1_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, lc_stack_2_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, rc_stack_1_ind)))
+        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, rc_stack_2_ind)))
 
     def simulate_action(self, tree):
         stack = [0]
@@ -134,7 +130,7 @@ class ParseTree():
         tag_dict = {0:None}
         tag_dict.update({w[0]:w[2] for w in tree.node})
         dep_dict = {w[0]:w[4] for w in tree.node}
-        dep_dict_parsed = {}
+        parsed_nodes = []
 
         action_list = []
         while(len(stack) >= 0):
@@ -156,28 +152,30 @@ class ParseTree():
                 except TypeError:
                     return None
                 if node[0] < node[3]:
+                    self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, parsed_nodes,
+                                     stack_1_ind, stack_2_ind, buffer_1_ind, lc_stack_1_ind, lc_stack_2_ind,
+                                     rc_stack_1_ind, rc_stack_2_ind)
+
+                    parsed_nodes.append(node[0])
                     left_childs[node[3]] = node[0] \
                         if left_childs[node[3]] is None or node[0] < left_childs[node[3]] \
                         else left_childs[node[3]]
-                    dep_dict_parsed[node[0]] = node[3]
-                    self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, dep_dict_parsed,
-                                     stack_1_ind, stack_2_ind, buffer_1_ind, lc_stack_1_ind, lc_stack_2_ind,
-                                     rc_stack_1_ind, rc_stack_2_ind)
+
                     action_list.append(((word_list, pos_list, dep_list), node[4]+ '_right'))
                     stack.pop(-2)
                 else:
                     right_childs[node[3]] = node[0] \
                         if right_childs[node[3]] is None or node[0] > right_childs[node[3]] \
                         else right_childs[node[3]]
-                    dep_dict[node[3]] = node[0]
-                    self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, dep_dict_parsed,
+                    parsed_nodes.append(node[0])
+                    self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, parsed_nodes,
                                      stack_1_ind, stack_2_ind, buffer_1_ind, lc_stack_1_ind, lc_stack_2_ind,
                                      rc_stack_1_ind, rc_stack_2_ind)
                     action_list.append(((word_list, pos_list, dep_list), node[4] + '_right'))
                     stack.pop(-1)
 
             else:
-                self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, dep_dict_parsed,
+                self.append_list(word_list, pos_list, dep_list, words, tag_dict, dep_dict, parsed_nodes,
                                  stack_1_ind, stack_2_ind, buffer_1_ind, lc_stack_1_ind, lc_stack_2_ind,
                                  rc_stack_1_ind, rc_stack_2_ind)
                 action_list.append(((word_list, pos_list, dep_list), 'shift'))
@@ -230,12 +228,12 @@ class ParseTree():
         return dep_list
 
     def write_file(self, actions):
-        with open('train.txt', 'at') as file_writer:
+        with open('data/train.txt', 'at', encoding='utf-8') as file_writer:
             try:
                 for action_pair in actions:
                     word_act = action_pair[0][0]
                     pos_act = action_pair[0][1]
-                    dep_act = action_pair[0][1]
+                    dep_act = action_pair[0][2]
                     word_act = ['_' if word is None else word for word in word_act]
                     pos_act = ['_' if pos is None else pos for pos in pos_act]
                     dep_act = ['_' if dep is None else dep for dep in dep_act]
@@ -248,44 +246,11 @@ class ParseTree():
             except TypeError:
                 pass
 
-    # def create_data(self, trees):
-    #     with open('train.txt', 'wt') as file_writer:
-    #         for i, tree in enumerate(trees):
-    #             parsed_tree = self.simulate_action(tree)
-    #             for action_pair in parsed_tree:
-    #                 word_act = action_pair[0][0]
-    #                 pos_act = action_pair[0][1]
-    #                 dep_act = action_pair[0][1]
-    #                 word_act = ['_' if word is None else word for word in word_act]
-    #                 pos_act = ['_' if pos is None else pos for pos in pos_act]
-    #                 dep_act = ['_' if dep is None else dep for dep in dep_act]
-    #
-    #                 file_writer.write(' '.join(word_act) + '\n')
-    #                 file_writer.write(' '.join(pos_act) + '\n')
-    #                 file_writer.write(' '.join(dep_act) + '\n')
-    #                 file_writer.write(action_pair[1] + '\n')
-    #                 file_writer.write('\n')
-
-
 
 pars = ParseTree()
-# print(pars.trees[6].sent)
-# print(pars.trees[6].node)
-i = 0
-for i in range(len(pars.trees)):
-    print(i)
-    act = pars.simulate_action(pars.trees[i])
-    if act is None:
-        i+= 1
-    pars.write_file(act)
-print(i)
-# parsed_tree = pars.simulate_action(pars.trees[1])
-# print(parsed_tree)
-# for i in range(100):
-#     print(i)
-#     parsed_tree(pars.trees[i])
-# print(parsed_tree)
-# print(len(parsed_tree))
-# print(parsed_tree)
-# pars.write_file(parsed_tree)
-# pars.create_data(pars.trees)
+trees = pars.trees
+# for tree in trees:
+#     act = pars.simulate_action(tree)
+#     pars.write_file(act)
+
+print(pars.simulate_action(trees[0]))
