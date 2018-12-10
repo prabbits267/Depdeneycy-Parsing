@@ -12,6 +12,7 @@ class DependencyDataset(Dataset):
         self.vocab, self.len_vocab = self.read_token_file()
         self.pos_tokens = self.read_pos()
         self.dep_token, self.len_dep = self.read_dep()
+        self.output = sorted(set(self.y_data))
 
     def __len__(self):
         return self.len
