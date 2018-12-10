@@ -5,9 +5,13 @@ class DependencyDataset(Dataset):
     def __init__(self):
         self.train_data = 'data/train.txt'
         self.train_vocab = 'data/tokens.txt'
+        self.pos_tokens_path = 'data/pos_tag.txt'
+        self.dep_tokens_path = 'data/dependence.txt'
         self.x_data, self.y_data = self.read_train_file()
         self.len = len(self.x_data)
         self.vocab, self.len_vocab = self.read_token_file()
+        self.pos_tokens = self.read_pos()
+        self.dep_token, self.len_dep = self.read_dep()
 
     def __len__(self):
         return self.len
@@ -29,12 +33,18 @@ class DependencyDataset(Dataset):
 
     def read_token_file(self):
         with open(self.train_vocab, 'rt', encoding='utf-8') as file_reader:
-            tokens = file_reader.read()
+            tokens = file_reader.read().split()
         tokens = sorted(set(tokens))
         return tokens, len(tokens)
 
+    def read_pos(self):
+        with open(self.pos_tokens_path, 'rt') as file_reader:
+            tokens = file_reader.read()
+        tokens = sorted(set(tokens))
+        return tokens
 
-dataset = DependencyDataset()
-dataloader = DataLoader(dataset=dataset,
-                        batch_size=1,
-                        shuffle=False)
+    def read_dep(self):
+        with open(self.dep_tokens_path, 'rt') as file_reader:
+            tokens = file_reader.read()
+        tokens = sorted(set(tokens))
+        return tokens, len(tokens)

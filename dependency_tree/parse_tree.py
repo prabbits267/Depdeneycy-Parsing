@@ -245,12 +245,3 @@ class ParseTree():
                     file_writer.write('\n')
             except TypeError:
                 pass
-
-
-pars = ParseTree()
-trees = pars.trees
-# for tree in trees:
-#     act = pars.simulate_action(tree)
-#     pars.write_file(act)
-
-print(pars.simulate_action(trees[0]))

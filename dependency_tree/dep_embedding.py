@@ -2,9 +2,9 @@ from gensim.models import Word2Vec
 
 class DepEmbedding:
     def __init__(self):
-        self.path = '../resources/dependence.txt'
-        self.model_name = '../resources/dep.mdl'
-        self.embed_size = 50
+        self.path = 'data/dependence.txt'
+        self.model_name = 'data/dep.mdl'
+        self.embed_size = 100
         self.window_size = 5
         self.min_count = 1
         self.sentences = self.prepare_data()
@@ -28,5 +28,5 @@ class DepEmbedding:
     def get_vector(self, dep):
         try:
             return self.word2vec[dep]
-        except IndexError:
+        except KeyError:
             return [0] * self.embed_size

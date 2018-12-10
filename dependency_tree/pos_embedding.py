@@ -2,9 +2,9 @@ from gensim.models import Word2Vec
 
 class PosEmbedding:
     def __init__(self):
-        self.path = '../resources/pos_tag.txt'
-        self.model_name = '../resources/pos.mdl'
-        self.embed_size = 50
+        self.path = 'data/pos_tag.txt'
+        self.model_name = 'data/pos.mdl'
+        self.embed_size = 100
         self.window_size = 5
         self.min_count = 1
         self.sentences = self.prepare_data()
@@ -28,5 +28,6 @@ class PosEmbedding:
     def get_vector(self, pos):
         try:
             return self.word2vec[pos]
-        except IndexError:
+        except KeyError:
             return [0] * self.embed_size
+
