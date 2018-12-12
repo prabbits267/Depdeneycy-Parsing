@@ -43,7 +43,6 @@ class DependencyParsing(nn.Module):
         self.word_linear = nn.Linear(self.word_embedding_size, self.out_word_size, bias=True)
         self.pos_linear = nn.Linear(self.pos_embedding_size, self.out_pos_size, bias=True)
         self.dep_linear = nn.Linear(self.dep_embedding_size, self.out_dep_size, bias=True)
-
         self.out = nn.Linear(self.out_word_size, self.output_size)
         self.softmax = nn.Softmax(dim=0)
 
@@ -63,37 +62,38 @@ class DependencyParsing(nn.Module):
         return self.create_var(output)
 
     def create_var(self, tensor):
-        return Variable(tensor.to(self.device))
+        tensor = tensor.to(self.device)
+        return Variable(tensor)
 
     def make_word_embedding(self, input):
         inputs = input[0].split()
         input_ind = [self.word_to_ind[w] for w in inputs]
-        input_embeddings = torch.Tensor()
+        input_embeddings = torch.Tensor().to(self.device)
         for ind in input_ind:
             if ind != -1:
-                embeds = self.word_lookup(torch.LongTensor([ind]))
+                embeds = self.word_lookup(torch.LongTensor([ind]).to(self.device))
                 embeds = embeds.view(-1)
                 input_embeddings = torch.cat((input_embeddings, embeds), 0)
             else:
-                input_embeddings = torch.cat((input_embeddings, torch.zeros([100])), 0)
+                input_embeddings = torch.cat((input_embeddings, torch.zeros([100]).to(self.device)), 0)
         return self.create_var(input_embeddings)
 
     def make_pos_embedding(self, input):
         inputs = input[0].split()
-        input_embedding = torch.Tensor()
+        input_embedding = torch.Tensor().to(self.device)
         for pos in inputs:
-            embedding = torch.Tensor(self.pos_lookup(pos))
+            embedding = torch.Tensor(self.pos_lookup(pos)).to(self.device)
             input_embedding = torch.cat((input_embedding, embedding), 0)
         return self.create_var(input_embedding)
 
     def make_dep_embedding(self, input):
         inputs = input[0].split()
-        input_embedding = torch.Tensor()
+        input_embedding = torch.Tensor().to(self.device)
         for pos in inputs:
-            embedding = torch.Tensor(self.dep_lookup(pos))
+            embedding = torch.Tensor(self.dep_lookup(pos)).to(self.device)
             input_embedding = torch.cat((input_embedding, embedding), 0)
         return self.create_var(input_embedding)
 
     def make_output(self, target):
         target_ind = self.dep_to_ind[target]
-        return self.create_var(torch.LongTensor(target_ind))
+        return self.create_var(torch.LongTensor([target_ind]))

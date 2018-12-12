@@ -245,3 +245,72 @@ class ParseTree():
                     file_writer.write('\n')
             except TypeError:
                 pass
+
+
+    def simulate_action(self, tree):
+        stack = [0]
+        input_buffer = [w[0] for w in tree.node]
+        words = [w[1] for w in tree.node]
+        words.insert(0, 'root')
+        parsed_nodes = []
+        action_list = []
+        words_stack = ['root']
+        words_in_buffer = [w[1] for w in tree.node]
+
+        stack_process , in_buffer, acts = [], [], []
+
+        while(len(stack) >= 0):
+            stack_process.append(self.get_item(words_stack, -1))
+            in_buffer.append(self.get_item(words_in_buffer, 0))
+            acts.append(self.get_item(action_list, -1))
+            if (len(input_buffer) == 0) or (len(stack) > 1 and (self.check_operation(stack[-1], stack[-2], tree.node, input_buffer[0] - 1))):
+                try:
+                    node, i = self.get_node(stack[-1], stack[-2], tree.node)
+                except IndexError:
+                    break
+                except TypeError:
+                    return None
+                if node[0] < node[3]:
+                    parsed_nodes.append(node[0])
+                    action_list.append(node[4]+ '_left')
+                    stack.pop(-2)
+                    words_stack.pop(-2)
+                else:
+                    parsed_nodes.append(node[0])
+                    action_list.append(node[4] + '_right')
+                    stack.pop(-1)
+                    words_stack.pop(-1)
+            else:
+                inbuff_ind = input_buffer[0]
+                action_list.append('shift')
+                stack.append(inbuff_ind)
+                input_buffer.pop(0)
+                words_stack.append(words[inbuff_ind])
+                words_in_buffer.pop(0)
+        return stack_process, in_buffer, acts
+
+    def write_file(self, configs):
+        try:
+            stacks = ['_' if w is None else w for w in configs[0]]
+            in_buffer = ['_' if w is None else w for w in configs[1]]
+            acts = ['_' if w is None else w for w in configs[2]]
+        except TypeError:
+            pass
+
+        stack_str = ' '.join(stacks)
+        in_buffer_str = ' '.join(in_buffer)
+        acts_str = ' '.join(acts)
+
+        with open('data/train_data.txt', 'at', encoding='utf-8') as file_writer:
+            file_writer.write(stack_str + '\n')
+            file_writer.write(in_buffer_str + '\n')
+            file_writer.write(acts_str + '\n')
+            file_writer.write('\n')
+
+pt = ParseTree()
+trees = pt.trees
+print(len(trees))
+for tree in trees:
+    act = pt.simulate_action(tree)
+    if act is not None:
+        pt.write_file(act)
