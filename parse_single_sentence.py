@@ -3,7 +3,7 @@ from os.path import join, splitext
 
 class Sentence():
     def __init__(self):
-        self.sentences = self.parse_files()
+        self.sentences = self.parse_file('data/en_ewt-ud-train.conllu')
         self.train_path = 'data/train_data.txt'
         self.token_path = 'data/tokens.txt'
 
@@ -50,7 +50,7 @@ class Sentence():
                     and '# s_type' not in line and '# speaker' not in line and '# newdoc' not in line\
                     and '# Checktree' not in line:
                 words = line.split('\t')
-                tokens.append(words[1])
+                tokens.append(words[2])
         return sentences, tokens
 
     def get_sentences(self):
@@ -61,7 +61,7 @@ class Sentence():
         sentences = []
         tokens_list = []
         for path in full_path:
-            single_sent, tokens = self.get_sentences_from_file(path)
+            single_sent, tokens = self.get_esntences_from_file(path)
             sentences += single_sent
             tokens_list += tokens
 
@@ -71,3 +71,5 @@ class Sentence():
 
         with open(self.token_path, 'wt', encoding='utf-8') as file_writer:
             file_writer.write(' '.join(set(tokens_list)))
+
+sent = Sentence()

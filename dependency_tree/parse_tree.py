@@ -22,7 +22,7 @@ class ParseTree():
             sent = Sentence()
             sentences = sent.sentences
             for sent in sentences:
-                if len(sent) > 3:
+                if len(sent) > 4:
                     try:
                         tree_raw = self.parse_single_sentence(sent)
                         tree = Tree(tree_raw)
@@ -49,7 +49,7 @@ class ParseTree():
         node = node.split('\t')
         try:
             word_id = int(node[0])
-            word = node[1]
+            word = node[2]
             POS = node[3]
             head_id = int(node[6])
             dependence_relation = node[7]
@@ -94,31 +94,6 @@ class ParseTree():
             return dict[key]
         except KeyError:
             return None
-
-    def append_list(self, word_list, pos_list, dep_list, words, tag_dict, dep_dict, dep_dict_parsed, stack_1_ind, stack_2_ind, buffer_1_ind, lc_stack_1_ind, lc_stack_2_ind,rc_stack_1_ind, rc_stack_2_ind):
-        word_list.append(self.get_item(words, stack_1_ind))
-        word_list.append(self.get_item(words, stack_2_ind))
-        word_list.append(self.get_item(words, buffer_1_ind))
-        word_list.append(self.get_item(words, lc_stack_1_ind))
-        word_list.append(self.get_item(words, lc_stack_2_ind))
-        word_list.append(self.get_item(words, rc_stack_1_ind))
-        word_list.append(self.get_item(words, rc_stack_2_ind))
-
-        pos_list.append(self.get_item_dict(tag_dict, stack_1_ind))
-        pos_list.append(self.get_item_dict(tag_dict, stack_2_ind))
-        pos_list.append(self.get_item_dict(tag_dict, buffer_1_ind))
-        pos_list.append(self.get_item_dict(tag_dict, lc_stack_1_ind))
-        pos_list.append(self.get_item_dict(tag_dict, lc_stack_2_ind))
-        pos_list.append(self.get_item_dict(tag_dict, rc_stack_1_ind))
-        pos_list.append(self.get_item_dict(tag_dict, rc_stack_2_ind))
-
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, stack_2_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, buffer_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, lc_stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, lc_stack_2_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, rc_stack_1_ind)))
-        dep_list.append(self.get_item_dict(dep_dict, self.get_item(dep_dict_parsed, rc_stack_2_ind)))
 
     def simulate_action(self, tree):
         stack = [0]
@@ -227,26 +202,6 @@ class ParseTree():
                 dep_list.append((node, nodes[left_child-1], nodes[right_child-1]))
         return dep_list
 
-    def write_file(self, actions):
-        with open('data/train.txt', 'at', encoding='utf-8') as file_writer:
-            try:
-                for action_pair in actions:
-                    word_act = action_pair[0][0]
-                    pos_act = action_pair[0][1]
-                    dep_act = action_pair[0][2]
-                    word_act = ['_' if word is None else word for word in word_act]
-                    pos_act = ['_' if pos is None else pos for pos in pos_act]
-                    dep_act = ['_' if dep is None else dep for dep in dep_act]
-
-                    file_writer.write(' '.join(word_act) + '\n')
-                    file_writer.write(' '.join(pos_act) + '\n')
-                    file_writer.write(' '.join(dep_act) + '\n')
-                    file_writer.write(action_pair[1] + '\n')
-                    file_writer.write('\n')
-            except TypeError:
-                pass
-
-
     def simulate_action(self, tree):
         stack = [0]
         input_buffer = [w[0] for w in tree.node]
@@ -307,10 +262,11 @@ class ParseTree():
             file_writer.write(acts_str + '\n')
             file_writer.write('\n')
 
-pt = ParseTree()
-trees = pt.trees
-print(len(trees))
-for tree in trees:
-    act = pt.simulate_action(tree)
-    if act is not None:
-        pt.write_file(act)
+    def generate_train_data(self):
+        for tree in self.trees:
+            act = self.simulate_action(tree)
+            if act is not None:
+                self.write_file(act)
+
+parse = ParseTree()
+parse.generate_train_data()
