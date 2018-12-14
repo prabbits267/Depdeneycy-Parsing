@@ -35,7 +35,6 @@ class ParseTree():
 
     def parse_single_sentence(self, raw_sent):
         sent_id = raw_sent[0].replace('# sent_id = ', '')
-        sent = raw_sent[1].replace('# text = ', '')
         node_list = list()
         for raw in raw_sent[2:]:
             try:
@@ -43,7 +42,9 @@ class ParseTree():
                 node_list.append(node)
             except:
                 raise Exception()
-        return sent_id, sent, node_list
+        sent = [w[1] for w in node_list]
+        tags = [w[2] for w in node_list]
+        return sent_id, sent, tags, node_list
 
     def parse_node(self, node):
         node = node.split('\t')
@@ -268,5 +269,71 @@ class ParseTree():
             if act is not None:
                 self.write_file(act)
 
+    def simulate_act(self, tree):
+        stack = [0]
+        input_buffer = [w[0] for w in tree.node]
+        left_childs = [None] * (len(tree.node) + 1)
+        right_childs = [None] * (len(tree.node) + 1)
+        action_list = []
+        while(len(stack) >= 0):
+            stack_ind = self.get_item(stack, -1)
+            input_ind = self.get_item(input_buffer, 0)
+            action = self.get_item(action_list, -1)
+            action_tag = self.get_item(action, 1)
+
+            if (len(input_buffer) == 0) or (len(stack) > 1 and (self.check_operation(stack[-1], stack[-2], tree.node, input_buffer[0] - 1))):
+                try:
+                    node, i = self.get_node(stack[-1], stack[-2], tree.node)
+                except IndexError:
+                    break
+                except TypeError:
+                    return None
+                if node[0] < node[3]:
+                    left_childs[node[3]] = node[0] \
+                        if left_childs[node[3]] is None or node[0] < left_childs[node[3]] \
+                        else left_childs[node[3]]
+
+                    action_list.append(((stack_ind, input_ind, action_tag), node[4]+ '_left'))
+                    stack.pop(-2)
+                else:
+                    right_childs[node[3]] = node[0] \
+                        if right_childs[node[3]] is None or node[0] > right_childs[node[3]] \
+                        else right_childs[node[3]]
+                    action_list.append(((stack_ind, input_ind, action_tag), node[4] + '_right'))
+                    stack.pop(-1)
+            else:
+                action_list.append(((stack_ind, input_ind, action_tag), 'shift'))
+                stack.append(input_buffer[0])
+                input_buffer.pop(0)
+        return tree.sent, tree.tags, action_list
+
+    def write_training_data(self, act):
+        sents = ' '.join(act[0])
+        tags = ' '.join(act[1])
+
+        with open('dataset/train_sentences.txt', 'at', encoding='utf-8') as file_writer:
+            file_writer.write(sents + '\n')
+
+        with open('dataset/train_data_2.txt', 'at', encoding='utf-8') as file_writer:
+            file_writer.write(sents + '\n')
+            file_writer.write(tags + '\n')
+            for action in act[2]:
+                act_str = ['_' if w is None else w for w in action[0]]
+                stack_buff_act = ' '.join([str(w) for w in act_str])
+                file_writer.write(stack_buff_act + '\n')
+                file_writer.write(action[1] + '\n') \
+                    if action[1] is not None\
+                    else file_writer.write('_' + '\n')
+            file_writer.write('\n')
+
+    def create_training_data(self):
+        trees = self.trees
+        for tree in trees:
+            act = self.simulate_act(tree)
+            if act is not None:
+                self.write_training_data(act)
+
 parse = ParseTree()
-parse.generate_train_data()
+trees = parse.trees
+parse.create_training_data()
+# parse.create_training_data()

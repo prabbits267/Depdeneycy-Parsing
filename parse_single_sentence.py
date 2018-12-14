@@ -1,3 +1,4 @@
+import os
 from os import listdir
 from os.path import join, splitext
 
@@ -7,8 +8,8 @@ class Sentence():
         self.train_path = 'data/train_data.txt'
         self.token_path = 'data/tokens.txt'
 
-
     def parse_file(self, file_name):
+        print(os.getcwd())
         with open(file_name, 'rt', encoding='utf-8') as file_reader:
             text = file_reader.read()
         parsed_sentences = list()
@@ -36,7 +37,6 @@ class Sentence():
             single_sent = self.parse_file(path)
             sentences += single_sent
         return sentences
-
 
     def get_sentences_from_file(self, file_name):
         with open(file_name, 'rt', encoding='utf-8') as file_reader:
@@ -72,4 +72,7 @@ class Sentence():
         with open(self.token_path, 'wt', encoding='utf-8') as file_writer:
             file_writer.write(' '.join(set(tokens_list)))
 
-sent = Sentence()
+# sent = Sentence()
+# sentences = sent.parse_file('dependency_tree/data/en_ewt-ud-train.conllu')
+# for sent in sentences:
+#     print(sent)
